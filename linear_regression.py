@@ -93,7 +93,9 @@ for train_index, test_index in partition:
     Error_test_rlr[k] = np.square(Y_test-temp).sum(axis=0)/Y_test.shape[0]
 
     # Estimate weights for unregularized linear regression, on entire training set
-   # w_noreg[:,k] = np.linalg.solve(XtX,Xty).squeeze()
+    lambdaI = opt_lambda * np.eye(M)
+    lambdaI[0,0] = 0 # Do no regularize the bias term
+    w_rlr[:,k] = np.linalg.solve(XtX+lambdaI,Xty).squeeze()
     # Compute mean squared error without regularization
     
     m = lm.LinearRegression().fit(X_train, Y_train)
@@ -144,4 +146,8 @@ print('Weights in last fold:')
 for m in range(M):
     print('{:>15} {:>15}'.format(names[m], np.round(w_rlr[m,-1],2)))
 
-print('Ran Exercise 8.1.1')
+
+
+
+
+
