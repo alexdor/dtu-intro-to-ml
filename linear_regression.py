@@ -16,7 +16,7 @@ df = pd.read_csv('heart.csv')
 y=pd.DataFrame(df["chol"])
 
 norm_vars=df[["trestbps","thalach","oldpeak","ca","slope"]]
-norm_vars=(df-df.mean())/df.std()
+norm_vars=(norm_vars-norm_vars.mean())/norm_vars.std()
 
 discrete=["sex",'cp','fbs','restecg','exang','thal']
 for col in discrete:
