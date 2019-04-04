@@ -9,11 +9,11 @@ from scipy.io import loadmat
 import sklearn.linear_model as lm
 from tools import rlr_validate
 from sklearn.preprocessing import normalize
-from sklearn.model_selection import KFold,cross_val_score
+from sklearn.model_selection import KFold,cross_val_score,train_test_split
 
 df = pd.read_csv('heart.csv')
 
-y=pd.DataFrame(df["chol"])
+y=pd.DataFrame(df["chol"]).to_numpy()
 
 norm_vars=df[["trestbps","thalach","oldpeak","ca","slope"]]
 norm_vars=(norm_vars-norm_vars.mean())/norm_vars.std()
@@ -30,19 +30,16 @@ X=pd.concat([d,norm_vars],axis=1)
 
 ## Crossvalidation
 # Create crossvalidation partition for evaluation
-K=2
+K=10
 #added some parameters
 kf = KFold(n_splits = K, shuffle = True, random_state = 2)
-partition=kf.split(X)
-train_test_splits=[]
-for i in range(k):
-    train_test_splits.append(next(partition))
-lambdas=pd.Series(np.power(10.,range(-5,9)))
+partition=kf.split(X,y)
 
+lambdas = np.power(10.,range(-5,9))
+names=X.columns.to_list()
+names[0]='age'
 
-
-
-
+X=X.to_numpy()
 # Initialize variables
 N=X.shape[0]
 M=X.shape[1]
@@ -60,11 +57,11 @@ sigma = np.empty((K, M-1))
 w_noreg = np.empty((M,K))
 
 k=0
-for i in range(K):
-    X_train = X.iloc[train_test_splits[i][0]]
-    X_test = X.iloc[train_test_splits[i][1]]
-    Y_train = y.iloc[train_test_splits[i][0]]
-    Y_test =  y.iloc[train_test_splits[i][1]]
+for train_index, test_index in partition:
+    X_train = X[train_index]
+    Y_train = y[train_index]
+    X_test = X[test_index]
+    Y_test = y[test_index]
 
     # extract training and test set for current CV fold
     internal_cross_validation = 10    
@@ -76,30 +73,32 @@ for i in range(K):
     # making new predictions) - for brevity we won't always store these in the scripts
     
     
-    Xty = X_train.T @ y_train
+    Xty = X_train.T @ Y_train
     XtX = X_train.T @ X_train
     
     # Compute mean squared error without using the input data at all
-    Error_train_nofeatures[k] = np.square(y_train-y_train.mean()).sum(axis=0)/y_train.shape[0]
-    Error_test_nofeatures[k] = np.square(y_test-y_test.mean()).sum(axis=0)/y_test.shape[0]
+    Error_train_nofeatures[k] = np.square(Y_train-Y_train.mean()).sum(axis=0)/Y_train.shape[0]
+    Error_test_nofeatures[k] = np.square(Y_test-Y_test.mean()).sum(axis=0)/Y_test.shape[0]
 
     # Estimate weights for the optimal value of lambda, on entire training set
     lambdaI = opt_lambda * np.eye(M)
     lambdaI[0,0] = 0 # Do no regularize the bias term
     w_rlr[:,k] = np.linalg.solve(XtX+lambdaI,Xty).squeeze()
     # Compute mean squared error with regularization with optimal lambda
-    Error_train_rlr[k] = np.square(y_train-X_train @ w_rlr[:,k]).sum(axis=0)/y_train.shape[0]
-    Error_test_rlr[k] = np.square(y_test-X_test @ w_rlr[:,k]).sum(axis=0)/y_test.shape[0]
+    temp=X_train @ w_rlr[:,k]
+    temp=temp.reshape((temp.shape[0],1))
+    Error_train_rlr[k] = np.square(Y_train-temp).sum(axis=0)/Y_train.shape[0]
+    temp=X_test @ w_rlr[:,k]
+    temp=temp.reshape((temp.shape[0],1))
+    Error_test_rlr[k] = np.square(Y_test-temp).sum(axis=0)/Y_test.shape[0]
 
     # Estimate weights for unregularized linear regression, on entire training set
-    w_noreg[:,k] = np.linalg.solve(XtX,Xty).squeeze()
+   # w_noreg[:,k] = np.linalg.solve(XtX,Xty).squeeze()
     # Compute mean squared error without regularization
-    Error_train[k] = np.square(y_train-X_train @ w_noreg[:,k]).sum(axis=0)/y_train.shape[0]
-    Error_test[k] = np.square(y_test-X_test @ w_noreg[:,k]).sum(axis=0)/y_test.shape[0]
-    # OR ALTERNATIVELY: you can use sklearn.linear_model module for linear regression:
-    #m = lm.LinearRegression().fit(X_train, y_train)
-    #Error_train[k] = np.square(y_train-m.predict(X_train)).sum()/y_train.shape[0]
-    #Error_test[k] = np.square(y_test-m.predict(X_test)).sum()/y_test.shape[0]
+    
+    m = lm.LinearRegression().fit(X_train, Y_train)
+    Error_train[k] = np.square(Y_train-m.predict(X_train)).sum()/Y_train.shape[0]
+    Error_test[k] = np.square(Y_test-m.predict(X_test)).sum()/Y_test.shape[0]
 
     # Display the results for the last cross-validation fold
     if k == K-1:
@@ -143,6 +142,6 @@ print('- R^2 test:     {0}\n'.format((Error_test_nofeatures.sum()-Error_test_rlr
 
 print('Weights in last fold:')
 for m in range(M):
-    print('{:>15} {:>15}'.format(attributeNames[m], np.round(w_rlr[m,-1],2)))
+    print('{:>15} {:>15}'.format(names[m], np.round(w_rlr[m,-1],2)))
 
 print('Ran Exercise 8.1.1')
