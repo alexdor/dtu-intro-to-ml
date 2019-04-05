@@ -13,12 +13,12 @@ from sklearn.model_selection import KFold,cross_val_score,train_test_split
 
 df = pd.read_csv('heart.csv')
 
-y=pd.DataFrame(df["chol"]).to_numpy()
+y=pd.DataFrame(df["target"]).to_numpy()
 
 norm_vars=df[["trestbps","thalach","oldpeak","ca","slope"]]
 norm_vars=(norm_vars-norm_vars.mean())/norm_vars.std()
 
-discrete=["sex",'cp','fbs','restecg','exang','thal','target']
+discrete=["sex",'cp','fbs','restecg','exang','thal']
 for col in discrete:
     temp=pd.get_dummies(df[col],prefix=col)
     norm_vars=pd.concat([norm_vars,temp],axis=1)
@@ -145,8 +145,7 @@ for m in range(M):
 
 
 
-best_coefficients=w_rlr[:,np.where(test_err_vs_lambda==min(test_err_vs_lambda))]
-best_coefficients=best_coefficients.reshape(best_coefficients.shape[0],1).flatten()
+best_coefficients=w_rlr[:,np.where(test_err_vs_lambda==min(test_err_vs_lambda))].reshape(23,1).flatten()
 best_coefficients=np.vstack((names,best_coefficients))
 print(best_coefficients)
 print("fuck")
