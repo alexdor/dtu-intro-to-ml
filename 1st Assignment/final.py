@@ -25,7 +25,7 @@ data = pd.read_csv("../input/" + os.listdir("../input")[0])
 df = data.copy()
 
 
-sumStats=[]
+sumStats = []
 
 for col in df.columns:
     appe = str(col) + "\n" + str(df[col].describe().transpose())
