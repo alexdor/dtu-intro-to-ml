@@ -1,14 +1,14 @@
-# exercise 8.2.6
+from os import path
+
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.io import loadmat
-import torch
-from sklearn import model_selection
-from toolbox_02450 import train_neural_net, draw_neural_net
-from scipy import stats
 import pandas as pd
-import numpy as np
-from os import path
+import torch
+from scipy import stats
+from scipy.io import loadmat
+from sklearn import model_selection
+
+from tools import draw_neural_net, train_neural_net
 
 script_dir = path.dirname(__file__)  # <-- absolute dir the script is in
 rel_path = "./heart.csv"
@@ -18,8 +18,7 @@ data_file = path.join(script_dir, rel_path)
 df = pd.read_csv(data_file)
 target = "chol"
 y = np.array([df[target]]).transpose()
-X = np.array(df.loc[:, df.columns != target])
-
+X = df.loc[:, df.columns != target]
 
 
 # Normalize data
@@ -44,7 +43,6 @@ else:
         temp = pd.get_dummies(df[col], prefix=col)
         new = pd.concat([new, temp], axis=1)
 
-
     d = pd.DataFrame(np.ones((new.shape[0], 1)))
     X = pd.concat([d, new], axis=1)
 attribute_names = list(X)
@@ -55,7 +53,7 @@ N, M = X.shape
 C = 2
 
 # Parameters for neural network classifier
-n_hidden_units = 2  # number of hidden units
+n_hidden_units = 1  # number of hidden units
 n_replicates = 3  # number of networks trained in each k-fold
 max_iter = 10000  #
 
@@ -92,7 +90,7 @@ errors = []  # make a list for storing generalizaition error in each loop
 for (k, (train_index, test_index)) in enumerate(CV.split(X, y)):
     print("\nCrossvalidation fold: {0}/{1}".format(k + 1, K))
 
-     # Extract training and test set for current CV fold, convert to tensors
+    # Extract training and test set for current CV fold, convert to tensors
     X_train = torch.tensor(X[train_index, :], dtype=torch.float)
     y_train = torch.tensor(y[train_index], dtype=torch.float)
     X_test = torch.tensor(X[test_index, :], dtype=torch.float)
@@ -127,9 +125,7 @@ for (k, (train_index, test_index)) in enumerate(CV.split(X, y)):
     summaries_axes[0].set_title("Learning curves")
 
 # Display the MSE across folds
-summaries_axes[1].bar(
-    np.arange(1, K + 1), np.squeeze(errors), color=color_list
-)
+summaries_axes[1].bar(np.arange(1, K + 1), np.squeeze(errors), color=color_list)
 summaries_axes[1].set_xlabel("Fold")
 summaries_axes[1].set_xticks(np.arange(1, K + 1))
 summaries_axes[1].set_ylabel("MSE")
@@ -169,4 +165,3 @@ plt.ylabel("Estimated value")
 plt.grid()
 
 plt.show()
-
