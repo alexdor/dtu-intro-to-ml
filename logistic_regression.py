@@ -10,12 +10,13 @@ import sklearn.linear_model as lm
 from tools import rlr_validate
 from sklearn.preprocessing import normalize
 from sklearn.model_selection import KFold,cross_val_score,train_test_split
-
+from sklearn.linear_model import LogisticRegression
+from tools import rocplot, confmatplot
 df = pd.read_csv('heart.csv')
 
 y=pd.DataFrame(df["target"]).to_numpy()
 
-norm_vars=df[["trestbps","thalach","oldpeak","ca","slope"]]
+norm_vars=df[["trestbps","thalach","oldpeak","ca","slope","chol"]]
 norm_vars=(norm_vars-norm_vars.mean())/norm_vars.std()
 
 discrete=["sex",'cp','fbs','restecg','exang','thal']
@@ -35,118 +36,102 @@ K=10
 kf = KFold(n_splits = K, shuffle = True, random_state = 2)
 partition=kf.split(X,y)
 
-lambdas = np.power(10.,range(-5,9))
+lambda_interval = np.power(10.,range(-5,9))
 names=np.asarray(X.columns.to_list())
 names[0]='age'
 
 X=X.to_numpy()
 # Initialize variables
-N=X.shape[0]
-M=X.shape[1]
+train_error_rate = np.zeros(len(lambda_interval))
+test_error_rate = np.zeros(len(lambda_interval))
+coefficient_norm = np.zeros(len(lambda_interval))
 
-Error_train = np.empty((K,1))
-Error_test = np.empty((K,1))
-Error_train_rlr = np.empty((K,1))
-Error_test_rlr = np.empty((K,1))
-Error_train_nofeatures = np.empty((K,1))
-Error_test_nofeatures = np.empty((K,1))
+#split data into train and test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.1, stratify=y)
 
-w_rlr = np.empty((M,K))
-mu = np.empty((K, M-1))
-sigma = np.empty((K, M-1))
-w_noreg = np.empty((M,K))
+#baseline calculations
+baseline_model=LogisticRegression(penalty='l2' )
+baseline_model.fit(X_train,y_train)
+base_y_train_est = baseline_model.predict(X_train).T
+base_y_train_est=np.asarray(base_y_train_est).reshape(len(base_y_train_est),1)
 
-k=0
-for train_index, test_index in partition:
-    X_train = X[train_index]
-    Y_train = y[train_index]
-    X_test = X[test_index]
-    Y_test = y[test_index]
+base_y_test_est = baseline_model.predict(X_test)
+base_y_test_est=np.asarray(base_y_test_est).reshape(len(base_y_test_est),1)
 
-    # extract training and test set for current CV fold
-    internal_cross_validation = 10    
+base_train_error_rate = np.sum(base_y_train_est != y_train) / len(y_train)
+base_test_error_rate = np.sum(base_y_test_est != y_test) / len(y_test)
+
+
+#for each lambda, train the model and track the train/test error rates
+
+for k in range(0, len(lambda_interval)):
+    mdl = LogisticRegression(penalty='l2', C=lambda_interval[k] )
     
-    opt_val_err, opt_lambda, mean_w_vs_lambda, train_err_vs_lambda, test_err_vs_lambda = rlr_validate(X_train, Y_train, lambdas, internal_cross_validation)
+    mdl.fit(X_train, y_train)
 
-    # Standardize outer fold based on training set, and save the mean and standard
-    # deviations since they're part of the model (they would be needed for
-    # making new predictions) - for brevity we won't always store these in the scripts
+    y_train_est = mdl.predict(X_train).T
+    y_train_est=np.asarray(y_train_est).reshape(len(y_train_est),1)
+
+    y_test_est = mdl.predict(X_test)
+    y_test_est=np.asarray(y_test_est).reshape(len(y_test_est),1)
     
+    train_error_rate[k] = np.sum(y_train_est != y_train) / len(y_train)
+    test_error_rate[k] = np.sum(y_test_est != y_test) / len(y_test)
+
+    w_est = mdl.coef_[0] 
+    coefficient_norm[k] = np.sqrt(np.sum(w_est**2))
+
+
+#find best lambda
+min_error = np.min(test_error_rate)
+opt_lambda_idx = np.where(test_error_rate==min(test_error_rate))
+train_test_min_indexes=train_error_rate[opt_lambda_idx]
+min_both_error=np.min(train_test_min_indexes)
+min_both_err_index=np.where(train_error_rate==min_both_error)
+opt_lambda = lambda_interval[min_both_err_index][0]
+
+
+#logistic model with best lambda
+mdl = LogisticRegression(penalty='l2', C=opt_lambda )
     
-    Xty = X_train.T @ Y_train
-    XtX = X_train.T @ X_train
-    
-    # Compute mean squared error without using the input data at all
-    Error_train_nofeatures[k] = np.square(Y_train-Y_train.mean()).sum(axis=0)/Y_train.shape[0]
-    Error_test_nofeatures[k] = np.square(Y_test-Y_test.mean()).sum(axis=0)/Y_test.shape[0]
+mdl.fit(X_train, y_train)
 
-    # Estimate weights for the optimal value of lambda, on entire training set
-    lambdaI = opt_lambda * np.eye(M)
-    lambdaI[0,0] = 0 # Do no regularize the bias term
-    w_rlr[:,k] = np.linalg.solve(XtX+lambdaI,Xty).squeeze()
-    # Compute mean squared error with regularization with optimal lambda
-    temp=X_train @ w_rlr[:,k]
-    temp=temp.reshape((temp.shape[0],1))
-    Error_train_rlr[k] = np.square(Y_train-temp).sum(axis=0)/Y_train.shape[0]
-    temp=X_test @ w_rlr[:,k]
-    temp=temp.reshape((temp.shape[0],1))
-    Error_test_rlr[k] = np.square(Y_test-temp).sum(axis=0)/Y_test.shape[0]
+y_train_est = mdl.predict(X_train).T
+y_train_est=np.asarray(y_train_est).reshape(len(y_train_est),1)
 
-    
-    # Compute mean squared error without regularization
-    m = lm.LinearRegression().fit(X_train, Y_train)
-    Error_train[k] = np.square(Y_train-m.predict(X_train)).sum()/Y_train.shape[0]
-    Error_test[k] = np.square(Y_test-m.predict(X_test)).sum()/Y_test.shape[0]
+y_test_est = mdl.predict(X_test)
+y_test_est=np.asarray(y_test_est).reshape(len(y_test_est),1)
 
-    # Display the results for the last cross-validation fold
-    if k == K-1:
-        figure(k, figsize=(12,8))
-        subplot(1,2,1)
-        semilogx(lambdas,mean_w_vs_lambda.T[:,1:],'.-') # Don't plot the bias term
-        xlabel('Regularization factor')
-        ylabel('Mean Coefficient Values')
-        grid()
-        # You can choose to display the legend, but it's omitted for a cleaner 
-        # plot, since there are many attributes
-        #legend(attributeNames[1:], loc='best')
-        
-        subplot(1,2,2)
-        title('Optimal lambda: 1e{0}'.format(np.log10(opt_lambda)))
-        loglog(lambdas,train_err_vs_lambda.T,'b.-',lambdas,test_err_vs_lambda.T,'r.-')
-        xlabel('Regularization factor')
-        ylabel('Squared error (crossvalidation)')
-        legend(['Train error','Validation error'])
-        grid()
-    
-    # To inspect the used indices, use these print statements
-    #print('Cross validation fold {0}/{1}:'.format(k+1,K))
-    #print('Train indices: {0}'.format(train_index))
-    #print('Test indices: {0}\n'.format(test_index))
 
-    k+=1
-
-show()
-# Display results
-print('Linear regression without feature selection:')
-print('- Training error: {0}'.format(Error_train.mean()))
-print('- Test error:     {0}'.format(Error_test.mean()))
-print('- R^2 train:     {0}'.format((Error_train_nofeatures.sum()-Error_train.sum())/Error_train_nofeatures.sum()))
-print('- R^2 test:     {0}\n'.format((Error_test_nofeatures.sum()-Error_test.sum())/Error_test_nofeatures.sum()))
-print('Regularized linear regression:')
-print('- Training error: {0}'.format(Error_train_rlr.mean()))
-print('- Test error:     {0}'.format(Error_test_rlr.mean()))
-print('- R^2 train:     {0}'.format((Error_train_nofeatures.sum()-Error_train_rlr.sum())/Error_train_nofeatures.sum()))
-print('- R^2 test:     {0}\n'.format((Error_test_nofeatures.sum()-Error_test_rlr.sum())/Error_test_nofeatures.sum()))
-
-print('Weights in last fold:')
-for m in range(M):
-    print('{:>15} {:>15}'.format(names[m], np.round(w_rlr[m,-1],2)))
+best_train_error_rate = (y_train_est != y_train).sum() / len(y_train)
+best_test_error_rate = (y_test_est != y_test).sum() / len(y_test)
 
 
 
+plt.figure(figsize=(8,8))
+plt.plot(lambda_interval, train_error_rate,'b')
+plt.plot(lambda_interval, test_error_rate,'r')
+plt.plot([opt_lambda], [min_error], 'go')
+#plt.yscale('log')
+plt.xscale('log')
+# plt.semilogx(lambda_interval, train_error_rate*100)
+# plt.semilogx(lambda_interval, test_error_rate*100)
+# plt.semilogx(opt_lambda, min_error*100, 'o')
+plt.text(1e-8, 3, "Minimum test error: " + str(np.round(min_error*100,2)) + ' % at 1e' + str(np.round(np.log10(opt_lambda),2)))
+plt.xlabel('Regularization strength, $\log_{10}(\lambda)$')
+plt.ylabel('Error rate (%)')
+plt.title('Classification error')
+plt.legend(['Training error','Test error','Test minimum'],loc='upper right')
+#plt.ylim([0,1])
+plt.grid()
+plt.show()    
 
-best_coefficients=w_rlr[:,np.where(test_err_vs_lambda==min(test_err_vs_lambda))].reshape(23,1).flatten()
-best_coefficients=np.vstack((names,best_coefficients))
-print(best_coefficients)
-print("fuck")
+
+plt.figure(figsize=(8,8))
+plt.semilogx(lambda_interval, coefficient_norm,'k')
+plt.ylabel('L2 Norm')
+plt.xlabel('Regularization strength, $\log_{10}(\lambda)$')
+plt.title('Parameter vector L2 norm')
+plt.grid()
+plt.show()    
 
