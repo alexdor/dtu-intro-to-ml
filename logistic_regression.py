@@ -16,7 +16,7 @@ df = pd.read_csv('heart.csv')
 
 y=pd.DataFrame(df["target"]).to_numpy()
 
-norm_vars=df[["trestbps","thalach","oldpeak","ca","slope","chol"]]
+norm_vars=df[["age","trestbps","thalach","oldpeak","ca","slope","chol"]]
 norm_vars=(norm_vars-norm_vars.mean())/norm_vars.std()
 
 discrete=["sex",'cp','fbs','restecg','exang','thal']
@@ -46,27 +46,62 @@ train_error_rate = np.zeros(len(lambda_interval))
 test_error_rate = np.zeros(len(lambda_interval))
 coefficient_norm = np.zeros(len(lambda_interval))
 
+for train_index, test_index in partition:
+    X_train = X[train_index]
+    Y_train = y[train_index]
+    X_test = X[test_index]
+
 #split data into train and test
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.1, stratify=y)
 
 #baseline calculations
-baseline_model=LogisticRegression(penalty='l2' )
-baseline_model.fit(X_train,y_train)
-base_y_train_est = baseline_model.predict(X_train).T
-base_y_train_est=np.asarray(base_y_train_est).reshape(len(base_y_train_est),1)
+    baseline_model=LogisticRegression(penalty='l2' )
+    baseline_model.fit(X_train,y_train)
+    base_y_train_est = baseline_model.predict(X_train).T
+    base_y_train_est=np.asarray(base_y_train_est).reshape(len(base_y_train_est),1)
 
-base_y_test_est = baseline_model.predict(X_test)
-base_y_test_est=np.asarray(base_y_test_est).reshape(len(base_y_test_est),1)
+    base_y_test_est = baseline_model.predict(X_test)
+    base_y_test_est=np.asarray(base_y_test_est).reshape(len(base_y_test_est),1)
 
-base_train_error_rate = np.sum(base_y_train_est != y_train) / len(y_train)
-base_test_error_rate = np.sum(base_y_test_est != y_test) / len(y_test)
+    base_train_error_rate = np.sum(base_y_train_est != y_train) / len(y_train)
+    base_test_error_rate = np.sum(base_y_test_est != y_test) / len(y_test)
 
 
-#for each lambda, train the model and track the train/test error rates
+    #for each lambda, train the model and track the train/test error rates
 
-for k in range(0, len(lambda_interval)):
-    mdl = LogisticRegression(penalty='l2', C=lambda_interval[k] )
-    
+
+
+
+
+    for k in range(0, len(lambda_interval)):
+        mdl = LogisticRegression(penalty='l2', C=lambda_interval[k] )
+        
+        mdl.fit(X_train, y_train)
+
+        y_train_est = mdl.predict(X_train).T
+        y_train_est=np.asarray(y_train_est).reshape(len(y_train_est),1)
+
+        y_test_est = mdl.predict(X_test)
+        y_test_est=np.asarray(y_test_est).reshape(len(y_test_est),1)
+        
+        train_error_rate[k] = np.sum(y_train_est != y_train) / len(y_train)
+        test_error_rate[k] = np.sum(y_test_est != y_test) / len(y_test)
+
+        w_est = mdl.coef_[0] 
+        coefficient_norm[k] = np.sqrt(np.sum(w_est**2))
+
+
+    #find best lambda
+    min_error = np.min(test_error_rate)
+    opt_lambda_idx = np.where(test_error_rate==min(test_error_rate))
+    train_test_min_indexes=train_error_rate[opt_lambda_idx]
+    min_both_error=np.min(train_test_min_indexes)
+    min_both_err_index=np.where(train_error_rate==min_both_error)
+    opt_lambda = lambda_interval[min_both_err_index][0]
+
+
+    #logistic model with best lambda
+    mdl = LogisticRegression(penalty='l2', C=opt_lambda )
+        
     mdl.fit(X_train, y_train)
 
     y_train_est = mdl.predict(X_train).T
@@ -74,37 +109,10 @@ for k in range(0, len(lambda_interval)):
 
     y_test_est = mdl.predict(X_test)
     y_test_est=np.asarray(y_test_est).reshape(len(y_test_est),1)
-    
-    train_error_rate[k] = np.sum(y_train_est != y_train) / len(y_train)
-    test_error_rate[k] = np.sum(y_test_est != y_test) / len(y_test)
-
-    w_est = mdl.coef_[0] 
-    coefficient_norm[k] = np.sqrt(np.sum(w_est**2))
 
 
-#find best lambda
-min_error = np.min(test_error_rate)
-opt_lambda_idx = np.where(test_error_rate==min(test_error_rate))
-train_test_min_indexes=train_error_rate[opt_lambda_idx]
-min_both_error=np.min(train_test_min_indexes)
-min_both_err_index=np.where(train_error_rate==min_both_error)
-opt_lambda = lambda_interval[min_both_err_index][0]
-
-
-#logistic model with best lambda
-mdl = LogisticRegression(penalty='l2', C=opt_lambda )
-    
-mdl.fit(X_train, y_train)
-
-y_train_est = mdl.predict(X_train).T
-y_train_est=np.asarray(y_train_est).reshape(len(y_train_est),1)
-
-y_test_est = mdl.predict(X_test)
-y_test_est=np.asarray(y_test_est).reshape(len(y_test_est),1)
-
-
-best_train_error_rate = (y_train_est != y_train).sum() / len(y_train)
-best_test_error_rate = (y_test_est != y_test).sum() / len(y_test)
+    best_train_error_rate = (y_train_est != y_train).sum() / len(y_train)
+    best_test_error_rate = (y_test_est != y_test).sum() / len(y_test)
 
 
 
