@@ -15,7 +15,7 @@ df = pd.read_csv('heart.csv')
 
 y=pd.DataFrame(df["chol"]).to_numpy()
 
-norm_vars=df[["trestbps","thalach","oldpeak","ca","slope"]]
+norm_vars=df[["age","trestbps","thalach","oldpeak","ca","slope"]]
 norm_vars=(norm_vars-norm_vars.mean())/norm_vars.std()
 
 discrete=["sex",'cp','fbs','restecg','exang','thal','target']
@@ -37,7 +37,7 @@ partition=kf.split(X,y)
 
 lambdas = np.power(10.,range(-5,9))
 names=np.asarray(X.columns.to_list())
-names[0]='age'
+names[0]='bias'
 
 X=X.to_numpy()
 # Initialize variables
@@ -55,6 +55,7 @@ w_rlr = np.empty((M,K))
 mu = np.empty((K, M-1))
 sigma = np.empty((K, M-1))
 w_noreg = np.empty((M,K))
+pvals = np.empty((M,K))
 
 k=0
 for train_index, test_index in partition:
@@ -62,27 +63,22 @@ for train_index, test_index in partition:
     Y_train = y[train_index]
     X_test = X[test_index]
     Y_test = y[test_index]
-
+    Xty = X_train.T @ Y_train
+    XtX = X_train.T @ X_train
+    
     # extract training and test set for current CV fold
     internal_cross_validation = 10    
     
     opt_val_err, opt_lambda, mean_w_vs_lambda, train_err_vs_lambda, test_err_vs_lambda = rlr_validate(X_train, Y_train, lambdas, internal_cross_validation)
 
-    # Standardize outer fold based on training set, and save the mean and standard
-    # deviations since they're part of the model (they would be needed for
-    # making new predictions) - for brevity we won't always store these in the scripts
-    
-    
-    Xty = X_train.T @ Y_train
-    XtX = X_train.T @ X_train
-    
+ 
     # Compute mean squared error without using the input data at all
     Error_train_nofeatures[k] = np.square(Y_train-Y_train.mean()).sum(axis=0)/Y_train.shape[0]
     Error_test_nofeatures[k] = np.square(Y_test-Y_test.mean()).sum(axis=0)/Y_test.shape[0]
 
     # Estimate weights for the optimal value of lambda, on entire training set
     lambdaI = opt_lambda * np.eye(M)
-    lambdaI[0,0] = 0 # Do no regularize the bias term
+    lambdaI[0,0] = 0 
     w_rlr[:,k] = np.linalg.solve(XtX+lambdaI,Xty).squeeze()
     # Compute mean squared error with regularization with optimal lambda
     temp=X_train @ w_rlr[:,k]
@@ -115,7 +111,7 @@ for train_index, test_index in partition:
         loglog(lambdas,train_err_vs_lambda.T,'b.-',lambdas,test_err_vs_lambda.T,'r.-')
         xlabel('Regularization factor')
         ylabel('Squared error (crossvalidation)')
-        legend(['Train error','Validation error'])
+        legend(['Train error','Generalization error'])
         grid()
     
     # To inspect the used indices, use these print statements
@@ -124,6 +120,7 @@ for train_index, test_index in partition:
     #print('Test indices: {0}\n'.format(test_index))
 
     k+=1
+plt.savefig("Linear_Regression_Lambda_Plot.jpg")
 
 show()
 # Display results
@@ -144,10 +141,10 @@ for m in range(M):
 
 
 
-
 best_coefficients=w_rlr[:,np.where(test_err_vs_lambda==min(test_err_vs_lambda))]
 best_coefficients=best_coefficients.reshape(best_coefficients.shape[0],1).flatten()
 best_coefficients=np.vstack((names,best_coefficients))
-print(best_coefficients)
+for i in range(best_coefficients.shape[1]):
+    print(best_coefficients[0,i],'&',best_coefficients[1,i],'\\\\','\n')
 print("fuck")
 

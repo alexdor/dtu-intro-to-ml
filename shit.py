@@ -17,7 +17,9 @@ data_file = path.join(script_dir, rel_path)
 
 df = pd.read_csv(data_file)
 target = "chol"
-y = np.array([df[target]]).transpose()
+y = np.array([df[target]])
+y=(y-y.mean())/y.std()
+y=y.transpose()
 X = df.loc[:, df.columns != target]
 
 
@@ -34,11 +36,11 @@ if do_pca_preprocessing:
     N, M = X.shape
 
 else:
-    norm_vars = df[["trestbps", "thalach", "oldpeak", "ca", "slope"]]
-    norm_vars = (df - df.mean()) / df.std()
+    norm_vars = df[["age","trestbps", "thalach", "oldpeak", "ca", "slope"]]
+    norm_vars = (norm_vars - norm_vars.mean()) / norm_vars.std()
     new = pd.DataFrame()
 
-    discrete = ["sex", "cp", "fbs", "restecg", "exang", "thal"]
+    discrete = ["sex", "cp", "fbs", "restecg", "exang", "thal","target"]
     for col in discrete:
         temp = pd.get_dummies(df[col], prefix=col)
         new = pd.concat([new, temp], axis=1)
@@ -54,8 +56,8 @@ C = 2
 
 # Parameters for neural network classifier
 n_hidden_units = 1  # number of hidden units
-n_replicates = 3  # number of networks trained in each k-fold
-max_iter = 10000  #
+n_replicates = 15  # number of networks trained in each k-fold
+max_iter = 8000  #
 
 # K-fold crossvalidation
 K = 10  # only three folds to speed up this example
@@ -80,7 +82,7 @@ color_list = [
 model = lambda: torch.nn.Sequential(
     torch.nn.Linear(M, n_hidden_units),  # M features to n_hidden_units
     torch.nn.Tanh(),  # 1st transfer function,
-    torch.nn.Linear(n_hidden_units, 1),  # n_hidden_units to 1 output neuron
+    torch.nn.Linear(n_hidden_units, 1) # n_hidden_units to 1 output neuron
     # no final tranfer function, i.e. "linear output"
 )
 loss_fn = torch.nn.MSELoss()  # notice how this is now a mean-squared-error loss
