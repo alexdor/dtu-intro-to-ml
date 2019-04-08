@@ -46,24 +46,26 @@ train_error_rate = np.zeros(len(lambda_interval))
 test_error_rate = np.zeros(len(lambda_interval))
 coefficient_norm = np.zeros(len(lambda_interval))
 
+
+
 for train_index, test_index in partition:
     X_train = X[train_index]
     Y_train = y[train_index]
     X_test = X[test_index]
-
+    Y_test=y[test_index]
 #split data into train and test
 
 #baseline calculations
     baseline_model=LogisticRegression(penalty='l2' )
-    baseline_model.fit(X_train,y_train)
-    base_y_train_est = baseline_model.predict(X_train).T
-    base_y_train_est=np.asarray(base_y_train_est).reshape(len(base_y_train_est),1)
+    baseline_model.fit(X_train,Y_train)
+    base_Y_train_est = baseline_model.predict(X_train).T
+    base_Y_train_est=np.asarray(base_Y_train_est).reshape(len(base_Y_train_est),1)
 
     base_y_test_est = baseline_model.predict(X_test)
     base_y_test_est=np.asarray(base_y_test_est).reshape(len(base_y_test_est),1)
 
-    base_train_error_rate = np.sum(base_y_train_est != y_train) / len(y_train)
-    base_test_error_rate = np.sum(base_y_test_est != y_test) / len(y_test)
+    base_train_error_rate = np.sum(base_Y_train_est != Y_train) / len(Y_train)
+    base_test_error_rate = np.sum(base_y_test_est != Y_test) / len(Y_test)
 
 
     #for each lambda, train the model and track the train/test error rates
@@ -75,19 +77,20 @@ for train_index, test_index in partition:
     for k in range(0, len(lambda_interval)):
         mdl = LogisticRegression(penalty='l2', C=lambda_interval[k] )
         
-        mdl.fit(X_train, y_train)
+        mdl.fit(X_train, Y_train)
 
-        y_train_est = mdl.predict(X_train).T
-        y_train_est=np.asarray(y_train_est).reshape(len(y_train_est),1)
+        Y_train_est = mdl.predict(X_train).T
+        Y_train_est=np.asarray(Y_train_est).reshape(len(Y_train_est),1)
 
         y_test_est = mdl.predict(X_test)
         y_test_est=np.asarray(y_test_est).reshape(len(y_test_est),1)
         
-        train_error_rate[k] = np.sum(y_train_est != y_train) / len(y_train)
-        test_error_rate[k] = np.sum(y_test_est != y_test) / len(y_test)
+        train_error_rate[k] = np.sum(Y_train_est != Y_train) / len(Y_train)
+        test_error_rate[k] = np.sum(y_test_est != Y_test) / len(Y_test)
 
         w_est = mdl.coef_[0] 
         coefficient_norm[k] = np.sqrt(np.sum(w_est**2))
+
 
 
     #find best lambda
@@ -102,17 +105,21 @@ for train_index, test_index in partition:
     #logistic model with best lambda
     mdl = LogisticRegression(penalty='l2', C=opt_lambda )
         
-    mdl.fit(X_train, y_train)
+    mdl.fit(X_train, Y_train)
 
-    y_train_est = mdl.predict(X_train).T
-    y_train_est=np.asarray(y_train_est).reshape(len(y_train_est),1)
+    Y_train_est = mdl.predict(X_train).T
+    Y_train_est=np.asarray(Y_train_est).reshape(len(Y_train_est),1)
 
     y_test_est = mdl.predict(X_test)
     y_test_est=np.asarray(y_test_est).reshape(len(y_test_est),1)
 
 
-    best_train_error_rate = (y_train_est != y_train).sum() / len(y_train)
-    best_test_error_rate = (y_test_est != y_test).sum() / len(y_test)
+    best_train_error_rate = (Y_train_est != Y_train).sum() / len(Y_train)
+    best_test_error_rate = (y_test_est != Y_test).sum() / len(Y_test)
+
+
+    
+
 
 
 
