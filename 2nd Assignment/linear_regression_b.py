@@ -5,7 +5,6 @@ import numpy as np
 
 import pandas as pd
 
-# import modin.pandas as pd
 import sklearn.linear_model as lm
 import torch
 from matplotlib.pylab import (
@@ -38,7 +37,7 @@ class AutoVivification(dict):
             return value
 
 
-n_replicates = 1  # number of networks trained in each k-fold
+n_replicates = 15  # number of networks trained in each k-fold
 max_iter = 10000
 
 script_dir = path.dirname(__file__)  # <-- absolute dir the script is in
@@ -48,51 +47,6 @@ data_file = path.join(script_dir, rel_path)
 
 df = pd.read_csv(data_file)
 target = "chol"
-# y = np.array([df[target]]).transpose()
-# X = df.loc[:, df.columns != target]
-
-# norm_vars = df[["trestbps", "thalach", "oldpeak", "ca", "slope"]]
-# norm_vars = (df - df.mean()) / df.std()
-# new = pd.DataFrame()
-
-# discrete = ["sex", "cp", "fbs", "restecg", "exang", "thal"]
-# for col in discrete:
-#     temp = pd.get_dummies(df[col], prefix=col)
-#     new = pd.concat([new, temp], axis=1)
-
-# d = pd.DataFrame(np.ones((new.shape[0], 1)))
-# X = pd.concat([d, new], axis=1)
-# attribute_names = list(X)
-# X = np.array(X)
-
-
-# Option 1
-# y = pd.DataFrame(df[target]).to_numpy()
-
-# y = (y - y.mean()) / y.std()
-
-# norm_vars = df[["age", "trestbps", "thalach", "oldpeak", "ca", "slope", "chol"]]
-# norm_vars = (norm_vars - norm_vars.mean()) / norm_vars.std()
-
-# discrete = ["sex", "cp", "fbs", "restecg", "exang", "thal"]
-# for col in discrete:
-#     temp = pd.get_dummies(df[col], prefix=col)
-#     norm_vars = pd.concat([norm_vars, temp], axis=1)
-
-
-# d = pd.DataFrame(np.ones((norm_vars.shape[0], 1)))
-# X = pd.concat([d, norm_vars], axis=1)
-# # Add offset attribute
-# N, M = X.shape
-
-# C = 2
-
-# # Add offset attribute
-# X = np.concatenate((np.ones((X.shape[0], 1)), X), 1)
-# # attribute_names = ["Offset"] + attribute_names
-# M = M + 1
-
-# Option 2
 
 y = np.array([df[target]])
 y = (y - y.mean()) / y.std()
@@ -124,7 +78,7 @@ CV = model_selection.KFold(K, shuffle=False)
 
 # Values of lambda
 lambdas = list(np.power(10.0, range(-3, 7)))
-hidden_layers = list(np.arange(start=1, stop=3))
+hidden_layers = list(np.arange(start=1, stop=19))
 
 
 # Initialize variables
@@ -143,15 +97,11 @@ k = 1
 results = AutoVivification()
 final_results = AutoVivification()
 for train_index, test_index in CV.split(X, y):
-    # results[f"train index {train_index}"] = {}
 
     # extract training and test set for current CV fold
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
 
-    # opt_val_err, opt_lambda, mean_w_vs_lambda, train_err_vs_lambda, test_err_vs_lambda = rlr_validate(
-    #     X_train, y_train, lambdas, internal_cross_validation
-    # )
     inner_scores = []
     # split the training data
 
@@ -162,19 +112,26 @@ for train_index, test_index in CV.split(X, y):
     f = 0
     y = y.squeeze()
     opt_lambda = 0
-    for train_nest_index, test_nest_index in CV_nest.split(X, y):
 
-        X_nest_train, X_nest_test = X[train_nest_index], X[test_nest_index]
-        y_nest_train, y_nest_test = y[train_nest_index], y[test_nest_index]
+    results = {"linear": np.array([])}
+    linera_test_error = np.empty((K, len(lambdas)))
+    ann_test_error = np.empty((K, len(hidden_layers)))
+    for train_nest_index, test_nest_index in CV_nest.split(X_test, y_test):
+
+        X_nest_train, X_nest_test = (
+            X_test[train_nest_index],
+            X_test[test_nest_index],
+        )
+        y_nest_train, y_nest_test = (
+            y_test[train_nest_index],
+            y_test[test_nest_index],
+        )
 
         train_error = np.empty(len(lambdas))
         test_error = np.empty(len(lambdas))
         # Standardize the training and set set based on training set moments
         mu = np.mean(X_nest_train[:, 1:], 0)
         sigma = np.std(X_nest_train[:, 1:], 0)
-
-        # X_nest_train[:, 1:] = (X_nest_train[:, 1:] - mu) / sigma
-        # X_nest_test[:, 1:] = (X_nest_test[:, 1:] - mu) / sigma
 
         # precompute terms
         Xty = X_nest_train.T @ y_nest_train
@@ -187,12 +144,9 @@ for train_index, test_index in CV.split(X, y):
             lambdaI[0, 0] = 0  # remove bias regularization
             w[:, f, l] = np.linalg.solve(XtX + lambdaI, Xty).squeeze()
             # Evaluate training and test performance
-            train_error[l] = np.power(
-                y_nest_train - X_nest_train @ w[:, f, l].T, 2
-            ).mean(axis=0)
-            test_error[l] = np.power(
+            linera_test_error[f, l] = np.power(
                 y_nest_test - X_nest_test @ w[:, f, l].T, 2
-            ).mean(axis=0)
+            ).mean()
 
         ann_err = []
         for hidden in hidden_layers:
@@ -236,71 +190,27 @@ for train_index, test_index in CV.split(X, y):
             se = (
                 y_test_est.float() - y_test_nest_ann.float()
             ) ** 2  # squared error
-            mse = (
-                sum(se).type(torch.float) / len(y_test_nest_ann)
-            ).data.numpy()  # mean
-            errors.append(mse)  # store error rate for current CV fold
-
-            ann_err.append(np.sqrt(np.mean(mse)))
-
-        # baseline = lm.LinearRegression().fit(X_nest_train, y_nest_train)
-
-        # results[f"outer {k}"][f"inner {f}"]["baseline"] = baseline.score(
-        #     X_nest_test, y_nest_test
-        # ).tolist()
+            mse = np.sum(se.tolist()) / len(y_test_nest_ann)  # mean
+            ann_test_error[
+                f, hidden - 1
+            ] = mse  # store error rate for current CV fold
 
         f += 1
 
     opt_val_err = np.min(np.mean(test_error))
-    opt_lambda = lambdas[np.argmin(test_error)]
+    opt_lambda = lambdas[np.argmin(np.mean(linera_test_error, axis=0))]
 
-    opt_hidden = hidden_layers[np.argmin(ann_err)]
-    # train_err_vs_lambda = np.mean(train_error, axis=0)
-    # test_err_vs_lambda = np.mean(test_error, axis=0)
-    # mean_w_vs_lambda = np.squeeze(np.mean(w, axis=1))
-
-    # Standardize outer fold based on training set, and save the mean and standard
-    # deviations since they're part of the model (they would be needed for
-    # making new predictions) - for brevity we won't always store these in the scripts
-    # mu[k, :] = np.mean(X_train[:, 1:], 0)
-    # sigma[k, :] = np.std(X_train[:, 1:], 0)
-
-    # X_train[:, 1:] = (X_train[:, 1:] - mu[k, :]) / sigma[k, :]
-    # X_test[:, 1:] = (X_test[:, 1:] - mu[k, :]) / sigma[k, :]
+    opt_hidden = hidden_layers[np.argmin(np.mean(ann_err, axis=0))]
 
     Xty = X_train.T @ y_train
     XtX = X_train.T @ X_train
-
-    # Compute mean squared error without using the input data at all
-    # Error_train_nofeatures[k] = (
-    #     np.square(y_train - y_train.mean()).sum(axis=0) / y_train.shape[0]
-    # )
-    # Error_test_nofeatures[k] = (
-    #     np.square(y_test - y_test.mean()).sum(axis=0) / y_test.shape[0]
-    # )
 
     # Estimate weights for the optimal value of lambda, on entire training set
     lambdaI = opt_lambda * np.eye(M)
     lambdaI[0, 0] = 0  # Do no regularize the bias term
     w_rlr[:, k - 1] = np.linalg.solve(XtX + lambdaI, Xty).squeeze()
-    # Compute mean squared error with regularization with optimal lambda
-    # Error_train_rlr[k] = (
-    #     np.square(y_train - X_train @ w_rlr[:, k]).sum(axis=0)
-    #     / y_train.shape[0]
-    # )
-    # Error_test_rlr[k] = (
-    #     np.square(y_test - X_test @ w_rlr[:, k]).sum(axis=0) / y_test.shape[0]
-    # )
 
-    # Compute mean squared error without regularization
-    # OR ALTERNATIVELY: you can use sklearn.linear_model module for linear regression:
     m = lm.LinearRegression().fit(X_train, y_train)
-    # Error_train[k] = (
-    #     np.square(y_train - m.predict(X_train)).sum() / y_train.shape[0]
-    # )
-    # Error_test[k] = (
-    #     np.square(y_test - m.predict(X_test)).sum() / y_test.shape[0]
-    # )
 
     model = lambda: torch.nn.Sequential(
         torch.nn.Linear(M, opt_hidden),  # M features to n_hidden_units
@@ -337,8 +247,7 @@ for train_index, test_index in CV.split(X, y):
 
     # Determine errors and errors
     se = (y_test_est.float() - y_test_ann.float()) ** 2  # squared error
-    # mse = np.sum(se) / len(y_test_ann)
-    mse = np.sum(se.data.tolist()) / len(y_test_ann)
+    mse = np.sum(se.tolist()) / len(y_test_ann)
 
     final_results[k - 1] = {
         "baseline": float(
@@ -361,43 +270,5 @@ for train_index, test_index in CV.split(X, y):
 
 import json
 
-with open(path.join(script_dir, "reg_b_3.json"), "w") as file:
+with open(path.join(script_dir, "reg_b.json"), "w") as file:
     file.write(json.dumps(final_results))
-
-# show()
-# # Display results
-# print("Linear regression without feature selection:")
-# print("- Training error: {0}".format(Error_train.mean()))
-# print("- Test error:     {0}".format(Error_test.mean()))
-# print(
-#     "- R^2 train:     {0}".format(
-#         (Error_train_nofeatures.sum() - Error_train.sum())
-#         / Error_train_nofeatures.sum()
-#     )
-# )
-# print(
-#     "- R^2 test:     {0}\n".format(
-#         (Error_test_nofeatures.sum() - Error_test.sum())
-#         / Error_test_nofeatures.sum()
-#     )
-# )
-# print("Regularized linear regression:")
-# print("- Training error: {0}".format(Error_train_rlr.mean()))
-# print("- Test error:     {0}".format(Error_test_rlr.mean()))
-# print(
-#     "- R^2 train:     {0}".format(
-#         (Error_train_nofeatures.sum() - Error_train_rlr.sum())
-#         / Error_train_nofeatures.sum()
-#     )
-# )
-# print(
-#     "- R^2 test:     {0}\n".format(
-#         (Error_test_nofeatures.sum() - Error_test_rlr.sum())
-#         / Error_test_nofeatures.sum()
-#     )
-# )
-
-# print("Weights in last fold:")
-# for m in range(M):
-#     print("{:>15} {:>15}".format(attribute_names[m], np.round(w_rlr[m, -1], 2)))
-
