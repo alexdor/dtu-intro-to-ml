@@ -83,12 +83,12 @@ title("Density estimate")
 figure(2)
 for k in range(1, 21):
     subplot(4, 5, k)
-    imshow(X[[k]].T)
+    print(X[[k]])
     xticks([])
     yticks([])
     if k == 3:
         title("Gaussian Kernel Density: Possible outliers")
-
+print()
 
 ### K-neighbors density estimator
 # Neighbor to use:
@@ -112,12 +112,12 @@ title("KNN density: Outlier score")
 figure(4)
 for k in range(1, 21):
     subplot(4, 5, k)
-    imshow(X[[k]].T)
+    print(X[[k]])
     xticks([])
     yticks([])
     if k == 3:
         title("KNN density: Possible outliers")
-
+print()
 
 ### K-nearest neigbor average relative density
 # Compute the average relative density
@@ -167,20 +167,21 @@ title("5th neighbor distance: Outlier score")
 figure(8)
 for k in range(1, 21):
     subplot(4, 5, k)
-    imshow(X[[k]].T)
+    print(X[[k]])
     xticks([])
     yticks([])
     if k == 3:
         title("5th neighbor distance: Possible outliers")
 
-
-# Plot random digits (the first 20 in the data set), for comparison
+print()
+# Plot random observations (the first 20 in the data set), for comparison
 figure(9)
 for k in range(1, 21):
     subplot(4, 5, k)
-    imshow(X[[k]].T)
+    print(X[[k]])
     xticks([])
     yticks([])
     if k == 3:
-        title("Random digits from data set")
+        title("Random observations from data set")
+print()
 show()
