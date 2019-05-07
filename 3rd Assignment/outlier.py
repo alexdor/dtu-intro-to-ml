@@ -79,16 +79,10 @@ figure(1)
 bar(range(20), density[:20])
 title("Density estimate")
 
-# Plot possible outlierS
-figure(2)
+# Show possible outlierS
 for k in range(1, 21):
-    subplot(4, 5, k)
     print(X[[k]])
-    xticks([])
-    yticks([])
-    if k == 3:
-        title("Gaussian Kernel Density: Possible outliers")
-print()
+print("-----------------------------------------------")
 
 ### K-neighbors density estimator
 # Neighbor to use:
@@ -109,15 +103,11 @@ figure(3)
 bar(range(20), density[:20])
 title("KNN density: Outlier score")
 # Plot possible outliers
-figure(4)
+print("KNN density: Possible outliers")
 for k in range(1, 21):
-    subplot(4, 5, k)
     print(X[[k]])
-    xticks([])
-    yticks([])
-    if k == 3:
-        title("KNN density: Possible outliers")
-print()
+print("-----------------------------------------------")
+
 
 ### K-nearest neigbor average relative density
 # Compute the average relative density
@@ -136,15 +126,10 @@ figure(5)
 bar(range(20), avg_rel_density[:20])
 title("KNN average relative density: Outlier score")
 # Plot possible outliers
-figure(6)
+print("KNN average relative density")
 for k in range(1, 21):
-    subplot(4, 5, k)
-    imshow(X[[k]].T)
-    xticks([])
-    yticks([])
-    if k == 3:
-        title("KNN average relative density: Possible outliers")
-
+    print(X[[k]])
+print("-----------------------------------------------")
 
 ### Distance to 5'th nearest neighbor outlier score
 K = 5
@@ -164,24 +149,15 @@ figure(7)
 bar(range(20), score[:20])
 title("5th neighbor distance: Outlier score")
 # Plot possible outliers
-figure(8)
+print("5th neighbor distance")
 for k in range(1, 21):
-    subplot(4, 5, k)
     print(X[[k]])
-    xticks([])
-    yticks([])
-    if k == 3:
-        title("5th neighbor distance: Possible outliers")
+print("-----------------------------------------------")
 
-print()
 # Plot random observations (the first 20 in the data set), for comparison
-figure(9)
+print("Random obs")
 for k in range(1, 21):
-    subplot(4, 5, k)
     print(X[[k]])
-    xticks([])
-    yticks([])
-    if k == 3:
-        title("Random observations from data set")
+print("-----------------------------------------------")
 print()
 show()
