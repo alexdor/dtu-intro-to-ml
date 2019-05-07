@@ -15,6 +15,7 @@ import pandas as pd
 from scipy.io import loadmat
 from toolbox_02450 import gausKernelDensity
 from sklearn.neighbors import NearestNeighbors
+ from tmp_tools import show_outlier
 
 from os import path
 
@@ -80,8 +81,8 @@ bar(range(20), density[:20])
 title("Density estimate")
 
 # Show possible outlierS
-for k in range(1, 21):
-    print(X[[k]])
+show_outlier(X, i)
+
 print("-----------------------------------------------")
 
 ### K-neighbors density estimator
@@ -104,8 +105,9 @@ bar(range(20), density[:20])
 title("KNN density: Outlier score")
 # Plot possible outliers
 print("KNN density: Possible outliers")
-for k in range(1, 21):
-    print(X[[k]])
+
+show_outlier(X, i)
+
 print("-----------------------------------------------")
 
 
@@ -127,8 +129,8 @@ bar(range(20), avg_rel_density[:20])
 title("KNN average relative density: Outlier score")
 # Plot possible outliers
 print("KNN average relative density")
-for k in range(1, 21):
-    print(X[[k]])
+show_outlier(X, i_avg_rel)
+
 print("-----------------------------------------------")
 
 ### Distance to 5'th nearest neighbor outlier score
@@ -145,14 +147,13 @@ i = score.argsort()
 score = score[i[::-1]]
 
 # Plot k-neighbor estimate of outlier score (distances)
-figure(7)
-bar(range(20), score[:20])
-title("5th neighbor distance: Outlier score")
-# Plot possible outliers
-print("5th neighbor distance")
-for k in range(1, 21):
-    print(X[[k]])
-print("-----------------------------------------------")
+# figure(7)
+# bar(range(20), score[:20])
+# title("5th neighbor distance: Outlier score")
+# # Plot possible outliers
+# print("5th neighbor distance")
+# show_outlier(X, i)
+# print("-----------------------------------------------")
 
 # Plot random observations (the first 20 in the data set), for comparison
 print("Random obs")
