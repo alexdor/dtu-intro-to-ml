@@ -1,0 +1,24 @@
+\{\} \rightarrow \{restecg \ 0th-50th percentile\}  (supp: 0.987, conf: 0.987)\\
+\{\} \rightarrow \{sex \ 0th-50th percentile\}  (supp: 1.000, conf: 1.000)\\
+\{\} \rightarrow \{target \ 0th-50th percentile\}  (supp: 1.000, conf: 1.000)\\
+\{fbs \ 0th-50th percentile\} \rightarrow \{restecg \ 0th-50th percentile\}  (supp: 0.838, conf: 0.984)\\
+\{fbs \ 0th-50th percentile\} \rightarrow \{sex \ 0th-50th percentile\}  (supp: 0.851, conf: 1.000)\\
+\{fbs \ 0th-50th percentile\} \rightarrow \{target \ 0th-50th percentile\}  (supp: 0.851, conf: 1.000)\\
+\{restecg \ 0th-50th percentile\} \rightarrow \{sex \ 0th-50th percentile\}  (supp: 0.987, conf: 1.000)\\
+\{sex \ 0th-50th percentile\} \rightarrow \{restecg \ 0th-50th percentile\}  (supp: 0.987, conf: 0.987)\\
+\{restecg \ 0th-50th percentile\} \rightarrow \{target \ 0th-50th percentile\}  (supp: 0.987, conf: 1.000)\\
+\{target \ 0th-50th percentile\} \rightarrow \{restecg \ 0th-50th percentile\}  (supp: 0.987, conf: 0.987)\\
+\{sex \ 0th-50th percentile\} \rightarrow \{target \ 0th-50th percentile\}  (supp: 1.000, conf: 1.000)\\
+\{target \ 0th-50th percentile\} \rightarrow \{sex \ 0th-50th percentile\}  (supp: 1.000, conf: 1.000)\\
+\{restecg \ 0th-50th percentile, fbs \ 0th-50th percentile\} \rightarrow \{sex \ 0th-50th percentile\}  (supp: 0.838, conf: 1.000)\\
+\{sex \ 0th-50th percentile, fbs \ 0th-50th percentile\} \rightarrow \{restecg \ 0th-50th percentile\}  (supp: 0.838, conf: 0.984)\\
+\{restecg \ 0th-50th percentile, fbs \ 0th-50th percentile\} \rightarrow \{target \ 0th-50th percentile\}  (supp: 0.838, conf: 1.000)\\
+\{target \ 0th-50th percentile, fbs \ 0th-50th percentile\} \rightarrow \{restecg \ 0th-50th percentile\}  (supp: 0.838, conf: 0.984)\\
+\{sex \ 0th-50th percentile, fbs \ 0th-50th percentile\} \rightarrow \{target \ 0th-50th percentile\}  (supp: 0.851, conf: 1.000)\\
+\{target \ 0th-50th percentile, fbs \ 0th-50th percentile\} \rightarrow \{sex \ 0th-50th percentile\}  (supp: 0.851, conf: 1.000)\\
+\{sex \ 0th-50th percentile, restecg \ 0th-50th percentile\} \rightarrow \{target \ 0th-50th percentile\}  (supp: 0.987, conf: 1.000)\\
+\{restecg \ 0th-50th percentile, target \ 0th-50th percentile\} \rightarrow \{sex \ 0th-50th percentile\}  (supp: 0.987, conf: 1.000)\\
+\{sex \ 0th-50th percentile, target \ 0th-50th percentile\} \rightarrow \{restecg \ 0th-50th percentile\}  (supp: 0.987, conf: 0.987)\\
+\{sex \ 0th-50th percentile, restecg \ 0th-50th percentile, fbs \ 0th-50th percentile\} \rightarrow \{target \ 0th-50th percentile\}  (supp: 0.838, conf: 1.000)\\
+\{restecg \ 0th-50th percentile, target \ 0th-50th percentile, fbs \ 0th-50th percentile\} \rightarrow \{sex \ 0th-50th percentile\}  (supp: 0.838, conf: 1.000)\\
+\{sex \ 0th-50th percentile, target \ 0th-50th percentile, fbs \ 0th-50th percentile\} \rightarrow \{restecg \ 0th-50th percentile\}  (supp: 0.838, conf: 0.984)\\
