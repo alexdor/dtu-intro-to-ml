@@ -15,7 +15,7 @@ import pandas as pd
 from scipy.io import loadmat
 from toolbox_02450 import gausKernelDensity
 from sklearn.neighbors import NearestNeighbors
- from tmp_tools import show_outlier
+from tmp_tools import show_outlier
 
 from os import path
 
